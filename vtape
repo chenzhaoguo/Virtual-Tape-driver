@@ -1,0 +1,87 @@
+# Shell script providing an interface to interact with the Virtual Tape Driver.
+# It performs various functions depending on the user input.
+# Calls appropriate routines defined in the Vtape Library (vtap_lib.o).
+
+
+#!/usr/bin/bash
+
+
+case "$1" in
+# Case create : Creates a virtual tape media.   
+# Usage: vtape.sh -create "media_path" -size "size".
+# It gives the media specified by the "media_path" , a virtual tape structure by creating a file of given "size",
+# and writing the header information onto it. 
+	-create) 
+		#[ $# -ne 4 ] && { echo "Usage: vtape -create media_path -size size" ; exit ; }
+		
+		mkfile $4 $2 ;
+	 	
+		lofiadm -a $2 /dev/lofi/1 ;
+
+		exec "./vtp_lib.o" "initialize" "$4" ;;	# Calls the initialize routine which writes the header
+		
+
+# Case insert : Provides abstraction of inserting the tape media. 
+# Usage: vtape.sh -insert "media_path".
+	-insert) 
+		#[ $# -lt 3 ] && { echo "Usage: vtape -insert media_path" ; exit ; }
+			 	
+		lofiadm -a $2 /dev/lofi/1 ;
+		
+		exec "./vtp_lib.o" "insert" ;;
+
+
+# Case validate: Checks for a valid tape media. 
+# Usage: vtape.sh -validate
+	-validate)
+		exec "./vtp_lib.o" "print_header" ;;	# Call to validate routine which checks whether the media is valid tape 
+
+
+	-printheader)
+		exec "./vtp_lib.o" "print_header" ;;
+
+
+# Case eject : Provides abstraction of ejecting the tape media. 
+# Usage: vtape.sh -eject
+	-eject)  
+		lofiadm -d /dev/lofi/1 ;
+		
+		echo "Media ejected successfully!!" ;;
+
+
+	-backup)
+		#[ $# -lt 2 ] && { echo "Usage: vtape -backup file_names" ; exit ; }
+		
+		exec "./vtp_lib.o" "backup" "$@" ;;
+		#shift 1
+		#tar -cvf /dev/rmt/0node $@;;
+
+	-restore)
+		#[ $# -lt 2 ] && { echo "Usage: vtape -restore file_names" ; exit ; }
+
+		#exec "./vtp_lib.o" "restore" "$@" ;;
+		shift 1
+                tar -xvf /dev/rmt/0node $@;;
+
+	-show_records)
+		#exec "./vtp_lib.o" "show_records" "$@" ;;
+		;;
+
+	-show_backups)
+		#exec "./vtp_lib.o" "show_backups" ;;
+		shift 1
+                tar -xvf /dev/rmt/0node $@;;
+	
+	-fsf)
+		#mt -f /devices/pseudo/lyr@1:node fsf $2;;
+		exec "./vtp_lib.o" "fsf"  "$2" ;;
+
+	
+	-bsf)
+		exec "./vtp_lib.o" "bsf" "$2" ;;
+
+	
+	-getrecsize)
+		exec "./vtp_lib.o" "get_record_size" ;;
+
+esac
